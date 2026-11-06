@@ -1,0 +1,18 @@
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
+val bn = (project.findProperty("buildNum") as String?)?.toIntOrNull() ?: 1
+android {
+    namespace = "gr.archerylab.score"
+    compileSdk = 34
+    defaultConfig { applicationId = "gr.archerylab.score"; minSdk = 24; targetSdk = 34; versionCode = bn; versionName = "1.$bn" }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = "17" }
+}
+dependencies {
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.webkit:webkit:1.11.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+}
