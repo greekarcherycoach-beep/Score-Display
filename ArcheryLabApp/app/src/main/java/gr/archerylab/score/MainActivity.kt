@@ -18,6 +18,7 @@ import org.json.JSONObject
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import android.view.View
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,17 +33,28 @@ class MainActivity : AppCompatActivity() {
         val c = WindowInsetsControllerCompat(window, window.decorView)
         if (immersive) {
             c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            c.hide(WindowInsetsCompat.Type.systemBars())
+            c.hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         } else {
-            c.show(WindowInsetsCompat.Type.systemBars())
+            c.show(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (immersive) web.evaluateJavascript("window.exitPres&&window.exitPres()", null)
+        else super.onBackPressed()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (immersive) applyImmersive()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -74,6 +86,19 @@ class MainActivity : AppCompatActivity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.addJavascriptInterface(Bridge(), "Native")
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+            if (immersive && (insets.isVisible(WindowInsetsCompat.Type.navigationBars()) ||
+                        insets.isVisible(WindowInsetsCompat.Type.statusBars()))) {
+                v.post { applyImmersive() }
+            }
+            ViewCompat.onApplyWindowInsets(v, insets)
+        }
+        @Suppress("DEPRECATION")
+        window.decorView.setOnSystemUiVisibilityChangeListener { flags ->
+            if (immersive && (flags and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
+                window.decorView.post { applyImmersive() }
+            }
+        }
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
 
@@ -108,6 +133,11 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 immersive = on
                 applyImmersive()
+                if (on) window.decorView.postDelayed({
+                    val i = ViewCompat.getRootWindowInsets(window.decorView)
+                    val nav = i?.isVisible(WindowInsetsCompat.Type.navigationBars()) ?: false
+                    web.evaluateJavascript("window.onFsState&&window.onFsState($nav)", null)
+                }, 900)
             }
         }
 
