@@ -17,12 +17,38 @@ import androidx.activity.result.contract.ActivityResultContracts
 import org.json.JSONObject
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import android.view.View
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.util.Collections
 
 class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
+    private var immersive = false
+
+    private fun applyImmersive() {
+        WindowCompat.setDecorFitsSystemWindows(window, !immersive)
+        val c = WindowInsetsControllerCompat(window, window.decorView)
+        if (immersive) {
+            c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            c.hide(WindowInsetsCompat.Type.systemBars())
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        } else {
+            c.show(WindowInsetsCompat.Type.systemBars())
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && immersive) applyImmersive()
+    }
     private val scanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         val t = r.data?.getStringExtra("text") ?: ""
         val e = r.data?.getStringExtra("err") ?: ""
@@ -80,13 +106,8 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun fullscreen(on: Boolean) {
             runOnUiThread {
-                val c = WindowInsetsControllerCompat(window, window.decorView)
-                if (on) {
-                    c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    c.hide(WindowInsetsCompat.Type.systemBars())
-                } else {
-                    c.show(WindowInsetsCompat.Type.systemBars())
-                }
+                immersive = on
+                applyImmersive()
             }
         }
 
